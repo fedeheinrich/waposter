@@ -1,0 +1,41 @@
+[
+    {
+        "group": "Nombre del Grupo 1",
+        "messages": [
+            {
+                "text": "Descripción 1",
+                "image": "images/imagen1.jpg"
+            },
+            {
+                "text": "Descripción 2",
+                "image": "images/imagen2.jpg"
+            }
+        ]
+    },
+    {
+        "group": "Nombre del Grupo 2",
+        "messages": [
+            {
+                "text": "Hola grupo!",
+                "image": "images/imagen1.jpg"
+            },
+            {
+                "text": "Descripción 2",
+                "image": "images/imagen2.jpg"
+            }
+        ]
+    },
+    {
+        "group": "Nombre del Grupo 1",
+        "messages": [
+            {
+                "text": "Descripción 1",
+                "image": "images/imagen1.jpg"
+            },
+            {
+                "text": "Descripción 2",
+                "image": "images/imagen2.jpg"
+            }
+        ]
+    }
+]
