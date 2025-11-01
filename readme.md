@@ -16,7 +16,6 @@
 - 🔄 Sistema de plantillas personalizable
 - 📋 Gestión de listas de destinatarios
 - 📊 Seguimiento de envíos y reportes
-- 🔒 Manejo seguro de credenciales
 
 ## 📋 Requisitos Previos
 
@@ -125,7 +124,6 @@ El archivo `data/messages.json` debe seguir esta estructura:
 ### Errores Comunes
 - **Error de Conexión**: Verifica tu conexión a Internet
 - **Archivo no encontrado**: Asegúrate de que las imágenes existen en `images/`
-- **Error de Autenticación**: Revisa tus credenciales en `.env`
 
 ### Logs
 Los logs se encuentran en `logs/waposter.log` con detalles de cada operación.
