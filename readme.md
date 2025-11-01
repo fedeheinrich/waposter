@@ -11,11 +11,13 @@
 
 ## 🌟 Características Principales
 
-- ✨ Envío automatizado de mensajes por WhatsApp
-- 📸 Soporte para envío de imágenes
-- 🔄 Sistema de plantillas personalizable
-- 📋 Gestión de listas de destinatarios
-- 📊 Seguimiento de envíos y reportes
+- ✨ **Envío Automatizado**: Programa y envía mensajes a múltiples grupos de WhatsApp sin intervención manual.
+- 📸 **Soporte Multimedia**: Envía mensajes que incluyen texto e imágenes.
+- 🔄 **Programación Flexible**: Configurado para ejecutarse cada 2 horas, con un retraso aleatorio para simular comportamiento humano.
+- 📂 **Sesión Persistente**: Guarda la sesión de WhatsApp para no tener que escanear el código QR en cada ejecución.
+- 🪵 **Logging Detallado**: Registra cada acción en `logs/waposter.log`, facilitando el seguimiento y la depuración.
+- 🛡️ **Manejo de Errores Robusto**: Detecta errores durante el envío, guarda una captura de pantalla y continúa con el siguiente grupo.
+- 🤖 **Instalación Sencilla**: `WebDriver-Manager` se encarga de descargar y configurar automáticamente el driver del navegador.
 
 ## 📋 Requisitos Previos
 
@@ -105,28 +107,41 @@ El archivo `data/messages.json` debe seguir esta estructura:
 
 ## 🎯 Uso
 
-1. **Preparación de Mensajes**:
-   - Edita `data/messages.json` con tus mensajes
-   - Coloca las imágenes en la carpeta `images/`
-   - Verifica los números de destinatarios
+1.  **Configuración**:
+    *   Abre el archivo `data/messages.json` y define los grupos de destino y los mensajes que deseas enviar.
+    *   Asegúrate de que las imágenes referenciadas en el JSON existan en la carpeta `images/`.
 
-2. **Ejecución**:
-   ```bash
-   python main.py
-   ```
+2.  **Ejecución Inicial**:
+    *   Ejecuta el script desde tu terminal:
+        ```bash
+        python main.py
+        ```
+    *   La primera vez, se abrirá WhatsApp Web. Deberás **escanear el código QR** con tu teléfono.
+    *   Una vez escaneado, presiona `ENTER` en la terminal. La sesión se guardará en la carpeta `WhatsAppBotProfile` para futuros inicios.
 
-3. **Monitoreo**:
-   - Revisa la consola para el estado de los envíos
-   - Los logs se guardan en `logs/waposter.log`
+3.  **Monitoreo**:
+    *   El bot comenzará su ciclo de envío programado. Puedes ver el progreso en tiempo real en la consola.
+    *   Para un análisis más detallado, revisa el archivo `logs/waposter.log`.
+    *   Para detener el bot de forma segura, presiona `Ctrl+C` en la terminal.
+
+## ⚠️ Uso Responsable
+
+El uso de herramientas de automatización en WhatsApp va en contra de sus Términos de Servicio y puede resultar en el **bloqueo temporal o permanente de tu número**. Para minimizar los riesgos, este script incluye pausas y retrasos aleatorios.
+
+- **No abuses del sistema**: Evita enviar mensajes masivos en cortos períodos de tiempo.
+- **Contenido Relevante**: Asegúrate de que los mensajes sean relevantes y esperados por los miembros del grupo.
+- **Usa bajo tu propio riesgo**: El desarrollador no se hace responsable por el bloqueo de cuentas o cualquier otra consecuencia derivada del mal uso de esta herramienta.
 
 ## 🔍 Resolución de Problemas
 
 ### Errores Comunes
-- **Error de Conexión**: Verifica tu conexión a Internet
-- **Archivo no encontrado**: Asegúrate de que las imágenes existen en `images/`
+- **Error al iniciar el driver**: Asegúrate de tener Microsoft Edge instalado. `WebDriver-Manager` se encargará del resto.
+- **El grupo no se encuentra**: Verifica que el nombre del grupo en `messages.json` coincida **exactamente** con el nombre en WhatsApp.
+- **Archivo de imagen no encontrado**: Comprueba que la ruta en `messages.json` (ej: `images/producto1.jpg`) sea correcta y que el archivo exista.
 
-### Logs
-Los logs se encuentran en `logs/waposter.log` con detalles de cada operación.
+### Logs y Capturas de Pantalla
+- **Logs**: Todos los eventos, advertencias y errores se guardan en `logs/waposter.log`. Es el primer lugar que debes revisar si algo falla.
+- **Capturas de Error**: Si ocurre un error grave durante el procesamiento de un grupo o mensaje, el script guardará una captura de pantalla (ej: `error_grupo_...png`) en la carpeta principal del proyecto. Estas imágenes son muy útiles para entender qué falló en la interfaz de WhatsApp.
 
 ## 🤝 Contribuciones
 
