@@ -31,11 +31,6 @@ Pequeña utilidad para publicar y enviar mensajes e imágenes a través de Whats
 - Ejecuta `main.py` para iniciar el proceso de publicación. El script leerá `data/messages.json` y enviará los mensajes e imágenes configuradas.
 - Revisa la salida en consola para ver el estado de cada envío y posibles errores.
 
-## Buenas prácticas
-
-- Haz pruebas enviando mensajes a números de prueba antes de lanzar envíos masivos.
-- Asegúrate de cumplir las políticas de WhatsApp y las leyes locales sobre envío de mensajes.
-
 ## Contribuciones
 
 Pull requests y reportes de issues son bienvenidos. Describe claramente los cambios propuestos y provee ejemplos si es posible.
