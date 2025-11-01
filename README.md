@@ -36,7 +36,7 @@
 
 2. Crea y activa un entorno virtual:
    ```bash
-   python -m venv venv
+   py -m venv env
    # En Windows
    .\venv\Scripts\activate
    # En Linux/Mac
@@ -55,12 +55,14 @@
 waposter/
 ├── main.py              # Script principal
 ├── requirements.txt     # Dependencias
+├── msedgedriver.exe    # Driver de Microsoft Edge
 ├── data/
 │   └── messages.json    # Configuración de mensajes
 ├── images/             # Imágenes de productos
 │   ├── producto1.jpg
 │   ├── producto2.jpg
 │   └── producto3.jpg
+├── logs/               # Directorio de registros
 └── README.md           # Documentación
 ```
 
