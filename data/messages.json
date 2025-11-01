@@ -1,52 +1,40 @@
 [
     {
-        "grupo": "Nombre del Grupo 1",
+        "grupo": "🫰🏻🤑   REVOLEOS 💰 GITANEO   🛒🏃🏻",
         "mensajes": [
             {
-                "texto": "Mensaje de Producto 1",
+                "texto": "Camiseta River Plate Talle L $40.0000",
                 "imagen": "images/producto1.jpg"
             },
             {
-                "texto": "Mensaje de Producto 2",
+                "texto": "Parlantes Home Theater F&D 2.1 26W $70.000",
                 "imagen": "images/producto2.jpg"
-            },
-            {
-                "texto": "Mensaje de Producto 3",
-                "imagen": "images/producto3.jpg"
             }
         ]
     },
     {
-        "grupo": "Nombre del Grupo 2",
+        "grupo": "COMPRA-VENTA 💰 S.A.O/L.G",
         "mensajes": [
             {
-                "texto": "Mensaje de Producto 1",
+                "texto": "Camiseta River Plate Talle L $40.0000",
                 "imagen": "images/producto1.jpg"
             },
             {
-                "texto": "Mensaje de Producto 2",
+                "texto": "Parlantes Home Theater F&D 2.1 26W $70.000",
                 "imagen": "images/producto2.jpg"
-            },
-            {
-                "texto": "Mensaje de Producto 3",
-                "imagen": "images/producto3.jpg"
             }
         ]
     },
     {
-        "grupo": "Nombre del Grupo 3",
+        "grupo": "Compro , Vendo, Cambio en Sao , Ls Gts y P.E  24/7",
         "mensajes": [
             {
-                "texto": "Mensaje de Producto 1",
+                "texto": "Camiseta River Plate Talle L $40.0000",
                 "imagen": "images/producto1.jpg"
             },
             {
-                "texto": "Mensaje de Producto 2",
+                "texto": "Parlantes Home Theater F&D 2.1 26W $70.000",
                 "imagen": "images/producto2.jpg"
-            },
-            {
-                "texto": "Mensaje de Producto 3",
-                "imagen": "images/producto3.jpg"
             }
         ]
     }
