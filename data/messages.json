@@ -1,40 +1,52 @@
 [
     {
-        "group": "Nombre del Grupo 1",
-        "messages": [
+        "grupo": "Nombre del Grupo 1",
+        "mensajes": [
             {
-                "text": "Descripción 1",
-                "image": "images/imagen1.jpg"
+                "texto": "Mensaje de Producto 1",
+                "imagen": "images/producto1.jpg"
             },
             {
-                "text": "Descripción 2",
-                "image": "images/imagen2.jpg"
+                "texto": "Mensaje de Producto 2",
+                "imagen": "images/producto2.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 3",
+                "imagen": "images/producto3.jpg"
             }
         ]
     },
     {
-        "group": "Nombre del Grupo 2",
-        "messages": [
+        "grupo": "Nombre del Grupo 2",
+        "mensajes": [
             {
-                "text": "Hola grupo!",
-                "image": "images/imagen1.jpg"
+                "texto": "Mensaje de Producto 1",
+                "imagen": "images/producto1.jpg"
             },
             {
-                "text": "Descripción 2",
-                "image": "images/imagen2.jpg"
+                "texto": "Mensaje de Producto 2",
+                "imagen": "images/producto2.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 3",
+                "imagen": "images/producto3.jpg"
             }
         ]
     },
     {
-        "group": "Nombre del Grupo 1",
-        "messages": [
+        "grupo": "Nombre del Grupo 3",
+        "mensajes": [
             {
-                "text": "Descripción 1",
-                "image": "images/imagen1.jpg"
+                "texto": "Mensaje de Producto 1",
+                "imagen": "images/producto1.jpg"
             },
             {
-                "text": "Descripción 2",
-                "image": "images/imagen2.jpg"
+                "texto": "Mensaje de Producto 2",
+                "imagen": "images/producto2.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 3",
+                "imagen": "images/producto3.jpg"
             }
         ]
     }
