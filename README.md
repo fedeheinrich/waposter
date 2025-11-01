@@ -136,7 +136,7 @@ El uso de herramientas de automatización en WhatsApp va en contra de sus Térmi
 ## 🔍 Resolución de Problemas
 
 ### Errores Comunes
-- **Error al iniciar el driver**: Asegúrate de tener Microsoft Edge instalado. `WebDriver-Manager` se encargará del resto.
+- **Error al iniciar el driver**: Asegúrate de tener Microsoft Edge instalado. 
 - **El grupo no se encuentra**: Verifica que el nombre del grupo en `messages.json` coincida **exactamente** con el nombre en WhatsApp.
 - **Archivo de imagen no encontrado**: Comprueba que la ruta en `messages.json` (ej: `images/producto1.jpg`) sea correcta y que el archivo exista.
 
