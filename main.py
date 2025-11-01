@@ -1,3 +1,4 @@
+import time, json, random, schedule, os, logging
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service as EdgeService
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
@@ -5,176 +6,213 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time, json, random, schedule, datetime, os, logging
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# --- Configuración del Logging ---
-# Ruta Absoluta del Script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-log_dir = os.path.join(script_dir, "logs")
-os.makedirs(log_dir, exist_ok=True) # Crea la carpeta 'logs' si no existe
+# --- CONFIGURACIÓN GLOBAL ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(SCRIPT_DIR, "logs")
+LOG_FILE_PATH = os.path.join(LOG_DIR, "waposter.log")
+MESSAGES_PATH = os.path.join(SCRIPT_DIR, "data", "messages.json")
+PROFILE_PATH = os.path.join(SCRIPT_DIR, 'WhatsAppBotProfile')
+MAX_WAIT_TIME = 20 # Segundos
 
-log_file_path = os.path.join(log_dir, "waposter.log")
+# --- SELECTORES XPATH ---
+XPATHS = {
+    "buscar_chat": '//div[@role="textbox"][@title="Buscar contacto o chat"]',
+    "chat_grupo_span": '//span[@title="{group_name}"]',
+    "boton_adjuntar": '//div[@role="button"][@aria-label="Adjuntar"]',
+    "input_media": '//input[@accept="image/*,video/*"]',
+    "input_comentario": '//div[@role="textbox"][@aria-label="Añade un comentario..."]',
+    "boton_enviar": '//div[@role="button"][@aria-label="Enviar"]'
+}
+# -----------------------------
 
-# Configura el logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] - %(message)s",
-    handlers=[
-        logging.FileHandler(log_file_path, encoding="utf-8"),
-        logging.StreamHandler() # Esto envía el log también a la consola
-    ]
-)
-# ---------------------------------
+def setup_logging():
+    """Configura el sistema de logging para consola y archivo."""
+    os.makedirs(LOG_DIR, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] - %(message)s",
+        handlers=[
+            logging.FileHandler(LOG_FILE_PATH, encoding="utf-8"),
+            logging.StreamHandler()
+        ]
+    )
+    logging.info("Logging configurado.")
 
-# Ruta del Driver de Edge (Automatizado)
-logging.info("Configurando el driver de Edge (WebDriver-Manager)...")
-service = EdgeService(EdgeChromiumDriverManager().install())
-# Ruta Absoluta del archivo JSON con los mensajes
-messages_path = os.path.join(script_dir, "data", "messages.json")
-
-# Configuración del navegador Edge (mantiene sesión)
-options = webdriver.EdgeOptions()
-options.add_argument("--start-maximized")
-options.add_argument(f"user-data-dir={os.path.join(script_dir, 'WhatsAppBotProfile')}") # 🟢 Guarda sesión en una carpeta local
-options.add_experimental_option("detach", True)
-
-try:
-    driver = webdriver.Edge(service=service, options=options)
-    driver.get("https://web.whatsapp.com/") 
-    logging.info("📱 Por favor, escaneá el código QR con tu teléfono y luego presioná ENTER en esta consola para continuar...")
-    input()
-    logging.info("QR escaneado. Iniciando bot...")
-except Exception as e:
-    logging.error(f"Error al iniciar el driver o WhatsApp Web: {e}")
-    exit()
-
-# Cargo los mensajes a enviar desde un archivo JSON
-try:
-    with open(messages_path, "r", encoding="utf-8") as file:
-        grupos = json.load(file)
-    logging.info(f"Se cargaron {len(grupos)} grupos desde {messages_path}")
-except FileNotFoundError:
-    logging.error(f"ERROR CRÍTICO: No se encontró el archivo 'data/messages.json'. Asegúrate de que exista.")
-    exit()
-except Exception as e:
-    logging.error(f"Error al leer el archivo JSON: {e}")
-    exit()
-
-def tarea_programada():
-    logging.info("--- Iniciando Tarea Programada ---")
-    delay_minutos = random.randint(0, 10) # 0 a 10 minutos
-    if delay_minutos > 0:
-        delay_segundos = delay_minutos * 60
-        logging.info(f"Retraso aleatorio activado. Esperando {delay_minutos} minutos ({delay_segundos}s) antes de enviar.")
-        time.sleep(delay_segundos)
+def setup_driver():
+    """Configura e inicia el WebDriver de Edge."""
+    logging.info("Configurando el driver de Edge (WebDriver-Manager)...")
+    service = EdgeService(EdgeChromiumDriverManager().install())
+    options = webdriver.EdgeOptions()
+    options.add_argument("--start-maximized")
+    options.add_argument(f"user-data-dir={PROFILE_PATH}")
+    options.add_experimental_option("detach", True)
     
-    enviar_mensajes()
+    try:
+        driver = webdriver.Edge(service=service, options=options)
+        driver.get("https://web.whatsapp.com/")
+        logging.info("📱 Por favor, escaneá el código QR y luego presioná ENTER...")
+        input()
+        logging.info("QR escaneado. Iniciando bot...")
+        return driver
+    except Exception as e:
+        logging.error(f"Error al iniciar el driver o WhatsApp Web: {e}")
+        exit()
 
-def enviar_mensajes():
-    wait = WebDriverWait(driver, 20)
+def load_messages():
+    """Carga los mensajes desde el archivo JSON."""
+    try:
+        with open(MESSAGES_PATH, "r", encoding="utf-8") as file:
+            grupos = json.load(file)
+        logging.info(f"Se cargaron {len(grupos)} grupos desde {MESSAGES_PATH}")
+        return grupos
+    except FileNotFoundError:
+        logging.error(f"ERROR CRÍTICO: No se encontró '{MESSAGES_PATH}'.")
+        exit()
+    except Exception as e:
+        logging.error(f"Error al leer el archivo JSON: {e}")
+        exit()
+
+def buscar_y_abrir_grupo(driver, wait, grupo_nombre):
+    """Busca un grupo por nombre y hace clic en él."""
+    try:
+        logging.info(f"Buscando grupo '{grupo_nombre}'...")
+        buscar_grupo_input = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, XPATHS["buscar_chat"])
+        ))
+        buscar_grupo_input.clear()
+        buscar_grupo_input.send_keys(grupo_nombre)
+
+        chat_grupo = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, XPATHS["chat_grupo_span"].format(group_name=grupo_nombre))
+        ))
+        chat_grupo.click()
+        logging.info(f"Grupo '{grupo_nombre}' encontrado y seleccionado.")
+        return True
+    except TimeoutException:
+        logging.error(f"No se pudo encontrar el grupo '{grupo_nombre}' (Timeout). ¿El nombre es exacto?")
+        return False
+    except Exception as e:
+        logging.error(f"Error inesperado al buscar '{grupo_nombre}': {e}")
+        return False
+
+def enviar_un_mensaje(driver, wait, mensaje_data):
+    """Adjunta imagen, escribe texto y envía un único mensaje."""
+    try:
+        # 1. Abrir boton de adjuntar
+        boton_adjuntar = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, XPATHS["boton_adjuntar"])
+        ))
+        boton_adjuntar.click()
+
+        # 2. Subir la imagen
+        input_archivo = wait.until(EC.presence_of_element_located(
+            (By.XPATH, XPATHS["input_media"])
+        ))
+        
+        ruta_abs_imagen = os.path.join(SCRIPT_DIR, mensaje_data["imagen"])
+        if not os.path.exists(ruta_abs_imagen):
+            logging.warning(f"  Aviso: No se encontró la imagen en {ruta_abs_imagen}. Saltando este mensaje.")
+            # Volver a home para no bloquear el chat
+            driver.get("https://web.whatsapp.com/") 
+            return False
+
+        logging.info(f"  Adjuntando imagen: {mensaje_data['imagen']}")
+        input_archivo.send_keys(ruta_abs_imagen)
+
+        # 3. Escribir la descripcion
+        logging.info(f"  Escribiendo texto: {mensaje_data['texto'][:30]}...")
+        descripcion = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, XPATHS["input_comentario"])
+        ))
+        descripcion.send_keys(mensaje_data["texto"])
+        time.sleep(random.randint(1, 5)) # Pausa "humana"
+
+        # 4. Enviar
+        boton_enviar = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, XPATHS["boton_enviar"])
+        ))
+        boton_enviar.click()
+        logging.info(f"  ¡Mensaje enviado exitosamente!")
+        return True
+
+    except Exception as e:
+        logging.error(f"  ❌ Error al enviar el mensaje (imagen: {mensaje_data['imagen']}): {e}")
+        driver.save_screenshot(f"error_enviando_mensaje.png")
+        logging.info("  Error capturado en screenshot. Volviendo a home...")
+        driver.get("https://web.whatsapp.com/") # Volver a home para estabilizar
+        return False
+
+def procesar_envios(driver, grupos):
+    """Función principal que orquesta el envío a todos los grupos."""
+    logging.info("--- Iniciando Tarea Programada ---")
+    
+    # Delay aleatorio al inicio de la tarea
+    delay_minutos = random.randint(0, 10)
+    if delay_minutos > 0:
+        logging.info(f"Retraso aleatorio activado. Esperando {delay_minutos} minutos.")
+        time.sleep(delay_minutos * 60)
+    
+    wait = WebDriverWait(driver, MAX_WAIT_TIME)
     total_grupos = len(grupos)
-    for i, grupo in enumerate(grupos):
-        grupo_nombre = grupo["grupo"]
+    
+    for i, grupo_data in enumerate(grupos):
+        grupo_nombre = grupo_data["grupo"]
         logging.info(f"\n--- Procesando Grupo {i+1}/{total_grupos}: {grupo_nombre} ---")
-        try:
-            # 1. Busco el grupo en WhatsApp Web
-            logging.info(f"Buscando grupo '{grupo_nombre}'...")
-            # CORREGIDO: Selector XPATH más robusto
-            buscar_grupo = wait.until(EC.element_to_be_clickable(
-                (By.XPATH, '//div[@role="textbox"][@title="Buscar contacto o chat"]')
-            ))
-            buscar_grupo.clear()
-            buscar_grupo.send_keys(grupo_nombre)
 
-            # 2. Espero a que el grupo aparezca en los resultados y le hago clic
-            chat_grupo = wait.until(EC.element_to_be_clickable(
-                (By.XPATH, f'//span[@title="{grupo_nombre}"]')
-            ))
-            chat_grupo.click()
-            logging.info(f"Grupo '{grupo_nombre}' encontrado y seleccionado.")
-
-            # 3. Envío todos los mensajes definidos para el grupo
-            total_mensajes = len(grupo["mensajes"])
-            for j, mensaje in enumerate(grupo["mensajes"]):
-                logging.info(f"Enviando mensaje {j+1}/{total_mensajes} a '{grupo_nombre}'...")
-                try:
-                    # Abrir boton de adjuntar
-                    # CORREGIDO: Selector XPATH más robusto
-                    boton_adjuntar = wait.until(EC.element_to_be_clickable(
-                        (By.XPATH, '//div[@role="button"][@aria-label="Adjuntar"]')
-                    ))
-                    boton_adjuntar.click()
-
-                    # Subir la imagen
-                    # Este selector es bastante estable, se mantiene
-                    input_archivo = wait.until(EC.presence_of_element_located(
-                        (By.XPATH,'//input[@accept="image/*,video/*"]')
-                    ))
-                    
-                    ruta_abs_imagen = os.path.join(script_dir, mensaje["imagen"])
-                    if not os.path.exists(ruta_abs_imagen):
-                        logging.warning(f"  Aviso: No se encontró la imagen en {ruta_abs_imagen}. Saltando este mensaje.")
-                        continue
-
-                    logging.info(f"  Adjuntando imagen: {mensaje['imagen']}")
-                    input_archivo.send_keys(ruta_abs_imagen)
-
-                    # 6. Escribir la descripcion (esperamos a que aparezca el cuadro de texto)
-                    logging.info(f"  Escribiendo texto: {mensaje['texto'][:30]}...")
-                    # CORREGIDO: Selector XPATH más robusto
-                    descripcion = wait.until(EC.element_to_be_clickable(
-                        (By.XPATH, '//div[@role="textbox"][@aria-label="Añade un comentario..."]')
-                    ))
-                    descripcion.send_keys(mensaje["texto"])
-                    time.sleep(random.randint(1,5)) # Pausa "humana"
-
-                   # 7. Enviar
-                    # CORREGIDO: Selector XPATH más robusto
-                    boton_enviar = wait.until(EC.element_to_be_clickable(
-                        (By.XPATH, '//div[@role="button"][@aria-label="Enviar"]')
-                    ))
-                    boton_enviar.click()
-                    logging.info(f"  ¡Mensaje enviado exitosamente!")
-
-                    # Pausa larga entre mensajes para evitar spam
-                    pausa_msg = random.randint(60,180)
-                    logging.info(f"  Pausa 'anti-spam' de {pausa_msg} segundos...")
-                    time.sleep(pausa_msg)
-                
-                except Exception as e:
-                    logging.error(f"  ❌ Error al enviar un mensaje a {grupo_nombre}: {e}")
-                    # Opcional: tomar un screenshot del error
-                    driver.save_screenshot(f"error_mensaje_{grupo_nombre.replace(' ', '_')}.png")
-                    logging.info("  Error capturado en screenshot. Intentando volver a la pantalla principal...")
-                    driver.get("https://web.whatsapp.com/") # Volver a home para estabilizar
-                    break # Salir del bucle de mensajes de este grupo
-
-        except Exception as e:
-            logging.error(f"❌❌ ERROR GRAVE: No se pudo procesar el grupo {grupo_nombre}. Saltando al siguiente.")
-            logging.error(f"   Motivo: {e}")
-            # Opcional: tomar un screenshot del error
+        if not buscar_y_abrir_grupo(driver, wait, grupo_nombre):
             driver.save_screenshot(f"error_grupo_{grupo_nombre.replace(' ', '_')}.png")
-            # Volver a la pantalla principal para buscar el siguiente grupo
-            driver.get("https://web.whatsapp.com/")
+            driver.get("https://web.whatsapp.com/") # Reset para el siguiente grupo
             continue # Salta al siguiente GRUPO
+
+        # Si encontramos el grupo, enviamos los mensajes
+        total_mensajes = len(grupo_data["mensajes"])
+        for j, mensaje in enumerate(grupo_data["mensajes"]):
+            logging.info(f"Enviando mensaje {j+1}/{total_mensajes} a '{grupo_nombre}'...")
+            
+            if not enviar_un_mensaje(driver, wait, mensaje):
+                # Si el envío falla, la función 'enviar_un_mensaje' ya lo logueó
+                # y reseteó la UI. Rompemos el bucle para este grupo.
+                logging.warning(f"  Saltando el resto de mensajes para '{grupo_nombre}' debido a un error.")
+                break # Salir del bucle de mensajes de este grupo
+            
+            # Pausa larga entre mensajes para evitar spam
+            pausa_msg = random.randint(60, 180)
+            logging.info(f"  Pausa 'anti-spam' de {pausa_msg} segundos...")
+            time.sleep(pausa_msg)
 
     logging.info("\n🎉 ¡Todos los grupos procesados! Esperando la próxima ejecución programada.")
 
+# --- EJECUCIÓN DEL SCRIPT ---
+def main():
+    setup_logging()
+    driver = setup_driver()
+    grupos = load_messages()
+    
+    # Programar la tarea
+    schedule.every(2).hours.do(procesar_envios, driver=driver, grupos=grupos)
+    # Opcional: Ejecutar una vez al inicio
+    # procesar_envios(driver, grupos) 
 
-# --- EJECUCIÓN DE LA TAREA ---
+    logging.info("🤖 Bot iniciado. Esperando para enviar mensajes cada 2 horas (Ctrl+C para detener)...")
+    
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(10)
+        except KeyboardInterrupt:
+            logging.info("\nPrograma detenido manualmente. ¡Adiós!")
+            break
+        except Exception as e:
+            logging.error(f"Error inesperado en el bucle principal: {e}")
+            break
+    
+    driver.quit()
 
-schedule.every(2).hours.do(tarea_programada)
-
-logging.info("🤖 Bot iniciado. Esperando para enviar mensajes cada 2 horas (Ctrl+C para detener)...")
-while True:
-    try:
-        schedule.run_pending()
-        time.sleep(10)
-    except KeyboardInterrupt:
-        logging.info("\nPrograma detenido manualmente. ¡Adiós!")
-        driver.quit()
-        break
-    except Exception as e:
-        logging.error(f"Error inesperado en el bucle principal: {e}")
-        driver.quit()
-        break
+# Esta es una "guarda" estándar en Python.
+# Asegura que el código dentro de ella solo se ejecute
+# cuando corres el archivo directamente (python main.py)
+# y no cuando es importado por otro script.
+if __name__ == "__main__":
+    main()
