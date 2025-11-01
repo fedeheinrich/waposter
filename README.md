@@ -17,7 +17,6 @@
 - 📂 **Sesión Persistente**: Guarda la sesión de WhatsApp para no tener que escanear el código QR en cada ejecución.
 - 🪵 **Logging Detallado**: Registra cada acción en `logs/waposter.log`, facilitando el seguimiento y la depuración.
 - 🛡️ **Manejo de Errores Robusto**: Detecta errores durante el envío, guarda una captura de pantalla y continúa con el siguiente grupo.
-- 🤖 **Instalación Sencilla**: `WebDriver-Manager` se encarga de descargar y configurar automáticamente el driver del navegador.
 
 ## 📋 Requisitos Previos
 
