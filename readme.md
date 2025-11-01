@@ -66,21 +66,42 @@ waposter/
 ### Configuración de Mensajes
 El archivo `data/messages.json` debe seguir esta estructura:
 ```json
-{
-  "mensajes": [
+[
     {
-      "texto": "¡Oferta especial!",
-      "imagen": "producto1.jpg",
-      "destinatarios": ["+549XXXXXXXXXX"],
-      "programado": "2025-11-01 15:00:00"
-    }
-  ]
-}
-```
-
-### Variables de Entorno
-Crea un archivo `.env` en la raíz del proyecto:
-```env
+        "grupo": "Nombre del Grupo 1",
+        "mensajes": [
+            {
+                "texto": "Mensaje de Producto 1",
+                "imagen": "images/producto1.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 2",
+                "imagen": "images/producto2.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 3",
+                "imagen": "images/producto3.jpg"
+            }
+        ]
+    },
+    {
+        "grupo": "Nombre del Grupo 2",
+        "mensajes": [
+            {
+                "texto": "Mensaje de Producto 1",
+                "imagen": "images/producto1.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto 2",
+                "imagen": "images/producto2.jpg"
+            },
+            {
+                "texto": "Mensaje de Producto ...",
+                "imagen": "images/producto3.jpg"
+            }
+        ]
+    },
+]
 ```
 
 ## 🎯 Uso
