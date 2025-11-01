@@ -1,7 +1,6 @@
 import time, json, random, schedule, os, logging
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service as EdgeService
-from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -14,6 +13,8 @@ LOG_DIR = os.path.join(SCRIPT_DIR, "logs")
 LOG_FILE_PATH = os.path.join(LOG_DIR, "waposter.log")
 MESSAGES_PATH = os.path.join(SCRIPT_DIR, "data", "messages.json")
 PROFILE_PATH = os.path.join(SCRIPT_DIR, 'WhatsAppBotProfile')
+# Ruta al driver local que SÍ funciona
+DRIVER_PATH = os.path.join(SCRIPT_DIR, "msedgedriver.exe") 
 MAX_WAIT_TIME = 20 # Segundos
 
 # --- SELECTORES XPATH ---
@@ -25,7 +26,7 @@ XPATHS = {
     "input_comentario": '//div[@role="textbox"][@aria-label="Añade un comentario..."]',
     "boton_enviar": '//div[@role="button"][@aria-label="Enviar"]'
 }
-# -----------------------------
+
 
 def setup_logging():
     """Configura el sistema de logging para consola y archivo."""
@@ -41,9 +42,15 @@ def setup_logging():
     logging.info("Logging configurado.")
 
 def setup_driver():
-    """Configura e inicia el WebDriver de Edge."""
-    logging.info("Configurando el driver de Edge (WebDriver-Manager)...")
-    service = EdgeService(EdgeChromiumDriverManager().install())
+    """Configura e inicia el WebDriver de Edge usando el driver local."""
+    logging.info(f"Configurando el driver de Edge (local: {DRIVER_PATH})...")
+    
+    if not os.path.exists(DRIVER_PATH):
+        logging.error(f"ERROR CRÍTICO: No se encontró 'msedgedriver.exe'.")
+        logging.error(f"Asegúrate de que el archivo esté en: {DRIVER_PATH}")
+        exit()
+
+    service = EdgeService(executable_path=DRIVER_PATH)
     options = webdriver.EdgeOptions()
     options.add_argument("--start-maximized")
     options.add_argument(f"user-data-dir={PROFILE_PATH}")
@@ -58,6 +65,7 @@ def setup_driver():
         return driver
     except Exception as e:
         logging.error(f"Error al iniciar el driver o WhatsApp Web: {e}")
+        logging.error("Asegúrate de que 'msedgedriver.exe' sea compatible con tu versión de Microsoft Edge.")
         exit()
 
 def load_messages():
@@ -114,8 +122,7 @@ def enviar_un_mensaje(driver, wait, mensaje_data):
         ruta_abs_imagen = os.path.join(SCRIPT_DIR, mensaje_data["imagen"])
         if not os.path.exists(ruta_abs_imagen):
             logging.warning(f"  Aviso: No se encontró la imagen en {ruta_abs_imagen}. Saltando este mensaje.")
-            # Volver a home para no bloquear el chat
-            driver.get("https://web.whatsapp.com/") 
+            driver.get("https://web.whatsapp.com/") # Volver a home para no bloquear el chat
             return False
 
         logging.info(f"  Adjuntando imagen: {mensaje_data['imagen']}")
@@ -148,7 +155,6 @@ def procesar_envios(driver, grupos):
     """Función principal que orquesta el envío a todos los grupos."""
     logging.info("--- Iniciando Tarea Programada ---")
     
-    # Delay aleatorio al inicio de la tarea
     delay_minutos = random.randint(0, 10)
     if delay_minutos > 0:
         logging.info(f"Retraso aleatorio activado. Esperando {delay_minutos} minutos.")
@@ -164,20 +170,16 @@ def procesar_envios(driver, grupos):
         if not buscar_y_abrir_grupo(driver, wait, grupo_nombre):
             driver.save_screenshot(f"error_grupo_{grupo_nombre.replace(' ', '_')}.png")
             driver.get("https://web.whatsapp.com/") # Reset para el siguiente grupo
-            continue # Salta al siguiente GRUPO
+            continue 
 
-        # Si encontramos el grupo, enviamos los mensajes
         total_mensajes = len(grupo_data["mensajes"])
         for j, mensaje in enumerate(grupo_data["mensajes"]):
             logging.info(f"Enviando mensaje {j+1}/{total_mensajes} a '{grupo_nombre}'...")
             
             if not enviar_un_mensaje(driver, wait, mensaje):
-                # Si el envío falla, la función 'enviar_un_mensaje' ya lo logueó
-                # y reseteó la UI. Rompemos el bucle para este grupo.
                 logging.warning(f"  Saltando el resto de mensajes para '{grupo_nombre}' debido a un error.")
-                break # Salir del bucle de mensajes de este grupo
+                break 
             
-            # Pausa larga entre mensajes para evitar spam
             pausa_msg = random.randint(60, 180)
             logging.info(f"  Pausa 'anti-spam' de {pausa_msg} segundos...")
             time.sleep(pausa_msg)
@@ -190,13 +192,10 @@ def main():
     driver = setup_driver()
     grupos = load_messages()
     
-    # Programar la tarea
     schedule.every(2).hours.do(procesar_envios, driver=driver, grupos=grupos)
-    # Opcional: Ejecutar una vez al inicio
-    # procesar_envios(driver, grupos) 
+    logging.info("🤖 Bot iniciado")
+    procesar_envios(driver, grupos)
 
-    logging.info("🤖 Bot iniciado. Esperando para enviar mensajes cada 2 horas (Ctrl+C para detener)...")
-    
     while True:
         try:
             schedule.run_pending()
@@ -210,9 +209,5 @@ def main():
     
     driver.quit()
 
-# Esta es una "guarda" estándar en Python.
-# Asegura que el código dentro de ella solo se ejecute
-# cuando corres el archivo directamente (python main.py)
-# y no cuando es importado por otro script.
 if __name__ == "__main__":
     main()
