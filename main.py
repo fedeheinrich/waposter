@@ -144,8 +144,7 @@ def enviar_un_mensaje(driver, wait, mensaje_data):
 
     except Exception as e:
         logging.error(f"  ❌ Error al enviar el mensaje (imagen: {mensaje_data['imagen']}): {e}")
-        driver.save_screenshot(f"error_enviando_mensaje.png")
-        logging.info("  Error capturado en screenshot. Volviendo a home...")
+        logging.info("  Error capturado. Volviendo a home...")
         driver.get("https://web.whatsapp.com/") # Volver a home para estabilizar
         return False
 
@@ -167,7 +166,6 @@ def procesar_envios(driver, grupos, con_delay=True):
         logging.info(f"\n--- Procesando Grupo {i+1}/{total_grupos}: {grupo_nombre} ---")
 
         if not buscar_y_abrir_grupo(driver, wait, grupo_nombre):
-            driver.save_screenshot(f"error_grupo_{grupo_nombre.replace(' ', '_')}.png")
             driver.get("https://web.whatsapp.com/") # Reset para el siguiente grupo
             continue 
 
