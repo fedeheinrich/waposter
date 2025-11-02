@@ -13,7 +13,6 @@ LOG_DIR = os.path.join(SCRIPT_DIR, "logs")
 LOG_FILE_PATH = os.path.join(LOG_DIR, "waposter.log")
 MESSAGES_PATH = os.path.join(SCRIPT_DIR, "data", "messages.json")
 PROFILE_PATH = os.path.join(SCRIPT_DIR, 'WhatsAppBotProfile')
-# Ruta al driver local que SÍ funciona
 DRIVER_PATH = os.path.join(SCRIPT_DIR, "msedgedriver.exe") 
 MAX_WAIT_TIME = 20 # Segundos
 
@@ -26,7 +25,6 @@ XPATHS = {
     "input_comentario": '//div[@role="textbox"][@aria-label="Añade un comentario..."]',
     "boton_enviar": '//div[@role="button"][@aria-label="Enviar"]'
 }
-
 
 def setup_logging():
     """Configura el sistema de logging para consola y archivo."""
@@ -151,14 +149,15 @@ def enviar_un_mensaje(driver, wait, mensaje_data):
         driver.get("https://web.whatsapp.com/") # Volver a home para estabilizar
         return False
 
-def procesar_envios(driver, grupos):
+def procesar_envios(driver, grupos, con_delay=True):
     """Función principal que orquesta el envío a todos los grupos."""
     logging.info("--- Iniciando Tarea Programada ---")
     
-    delay_minutos = random.randint(0, 10)
-    if delay_minutos > 0:
-        logging.info(f"Retraso aleatorio activado. Esperando {delay_minutos} minutos.")
-        time.sleep(delay_minutos * 60)
+    if con_delay:
+        delay_minutos = random.randint(0, 10)
+        if delay_minutos > 0:
+            logging.info(f"Retraso aleatorio activado. Esperando {delay_minutos} minutos.")
+            time.sleep(delay_minutos * 60)
     
     wait = WebDriverWait(driver, MAX_WAIT_TIME)
     total_grupos = len(grupos)
@@ -194,7 +193,7 @@ def main():
     
     schedule.every(2).hours.do(procesar_envios, driver=driver, grupos=grupos)
     logging.info("🤖 Bot iniciado")
-    procesar_envios(driver, grupos)
+    procesar_envios(driver, grupos, con_delay=False)
 
     while True:
         try:
