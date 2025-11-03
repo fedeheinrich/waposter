@@ -1,4 +1,4 @@
-import time, json, random, schedule, os, logging
+import re, time, json, random, schedule, os, logging
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.common.by import By
@@ -81,26 +81,74 @@ def load_messages():
         exit()
 
 def buscar_y_abrir_grupo(driver, wait, grupo_nombre):
-    """Busca un grupo por nombre y hace clic en él."""
+    """
+    Busca un grupo por nombre, limpiando automáticamente emojis y
+    símbolos antes de buscar para hacerlo más robusto.
+    """
+    nombre_limpio_final = "" # Inicializar para que esté disponible en el bloque except
     try:
-        logging.info(f"Buscando grupo '{grupo_nombre}'...")
+        # --- INICIO DE LA LÓGICA DE LIMPIEZA ---
+
+        # 1. Normalizar espacios (quitar espacios dobles, raros, etc.)
+        nombre_con_espacios_norm = " ".join(grupo_nombre.split())
+        
+        # 2. Quitar emojis, comas y caracteres especiales.
+        #    Nos quedamos solo con letras, números, espacios y (./_-)
+        nombre_sin_emojis = re.sub(r'[^\w\s\./_-]', '', nombre_con_espacios_norm)
+        
+        # 3. Volver a normalizar espacios.
+        nombre_limpio_final = " ".join(nombre_sin_emojis.split())
+
+        # --- FIN DE LA LÓGICA DE LIMPIEZA ---
+
+        logging.info(f"Procesando grupo (Nombre JSON): '{grupo_nombre}'")
+        logging.info(f"Buscando con nombre limpio: '{nombre_limpio_final}'")
+        
         buscar_grupo_input = wait.until(EC.element_to_be_clickable(
             (By.XPATH, XPATHS["buscar_chat"])
         ))
         buscar_grupo_input.clear()
-        buscar_grupo_input.send_keys(grupo_nombre)
+
+        # 4. Usar el nombre LIMPIO para la BÚSQUEDA (send_keys)
+        buscar_grupo_input.send_keys(nombre_limpio_final)
+        time.sleep(2) # Pausa para que la UI de WhatsApp se actualice
+
+        # 5. Construir un selector XPath más robusto
+        parts = [part for part in nombre_limpio_final.split() if part]
+        if not parts:
+            logging.warning(f"El nombre del grupo '{grupo_nombre}' resultó en una cadena vacía. Saltando.")
+            return False
+            
+        conditions = [f"contains(@title, '{part}')" for part in parts]
+        xpath_selector_flexible = f"//span[{' and '.join(conditions)}]"
+
+        logging.info(f"Esperando por el selector (flexible): {xpath_selector_flexible}")
 
         chat_grupo = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, XPATHS["chat_grupo_span"].format(group_name=grupo_nombre))
+            (By.XPATH, xpath_selector_flexible)
         ))
+        
         chat_grupo.click()
-        logging.info(f"Grupo '{grupo_nombre}' encontrado y seleccionado.")
+        logging.info(f"¡Clic exitoso! El título real del elemento era: '{chat_grupo.get_attribute('title')}'")
         return True
+    
     except TimeoutException:
-        logging.error(f"No se pudo encontrar el grupo '{grupo_nombre}' (Timeout). ¿El nombre es exacto?")
+        logging.error(f"No se pudo encontrar el grupo con nombre limpio '{nombre_limpio_final}' (Timeout).")
+        logging.error(f"El nombre original era: '{grupo_nombre}'")
+        logging.error("Verifica que el nombre en el JSON sea correcto y que el grupo sea visible en WhatsApp Web.")
+        
+        try:
+            # Usar wait para más robustez al limpiar
+            wait.until(EC.element_to_be_clickable((By.XPATH, XPATHS["buscar_chat"]))).clear()
+            logging.info("Campo de búsqueda limpiado para el siguiente intento.")
+        except Exception as e_clear:
+            logging.warning(f"No se pudo limpiar el campo de búsqueda tras el error: {e_clear}")
+            
         return False
+    
     except Exception as e:
-        logging.error(f"Error inesperado al buscar '{grupo_nombre}': {e}")
+        # Usar repr(e) para obtener más detalles del error
+        logging.error(f"Error inesperado al buscar el grupo '{grupo_nombre}' (nombre limpio: '{nombre_limpio_final}'): {repr(e)}")
         return False
 
 def enviar_un_mensaje(driver, wait, mensaje_data):
