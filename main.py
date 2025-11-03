@@ -16,9 +16,11 @@ PROFILE_PATH = os.path.join(SCRIPT_DIR, 'WhatsAppBotProfile')
 DRIVER_PATH = os.path.join(SCRIPT_DIR, "msedgedriver.exe") 
 MAX_WAIT_TIME = 20 # Segundos
 
-# --- SELECTORES XPATH ---
+# --- SELECTORES XPATH ACTUALIZADOS ---
 XPATHS = {
-    "buscar_chat": '//div[@role="textbox"][@title="Buscar contacto o chat"]',
+    "buscar_chat": '//input[@placeholder="Buscar un chat o iniciar uno nuevo"]',  # Alternativa 1
+    "buscar_chat_alt1": '//input[contains(@placeholder, "Buscar")]',  # Alternativa 2
+    "buscar_chat_alt2": '//div[@contenteditable="true"][@data-tab="0"]',  # Alternativa 3
     "chat_grupo_span": '//span[@title="{group_name}"]',
     "boton_adjuntar": '//div[@role="button"][@aria-label="Adjuntar"]',
     "input_media": '//input[@accept="image/*,video/*"]',
@@ -80,75 +82,111 @@ def load_messages():
         logging.error(f"Error al leer el archivo JSON: {e}")
         exit()
 
+def escribir_en_campo_busqueda(driver, texto):
+    """
+    Escribe en el campo de búsqueda carácter por carácter 
+    para que WhatsApp detecte cada pulsación.
+    """
+    try:
+        # Encontrar el campo contenteditable
+        campos = driver.find_elements(By.XPATH, '//div[@contenteditable="true"]')
+        
+        if not campos:
+            logging.error("   ✗ No se encontró el campo contenteditable")
+            return False
+        
+        campo = campos[0]
+        
+        # Hacer clic en el campo para enfocarlo
+        campo.click()
+        time.sleep(0.3)
+        
+        # Limpiar con Ctrl+A y Delete
+        campo.send_keys(Keys.CONTROL + "a")
+        time.sleep(0.1)
+        campo.send_keys(Keys.DELETE)
+        time.sleep(0.2)
+        
+        # Escribir carácter por carácter para simular escritura humana
+        logging.info(f"   Escribiendo: {texto}")
+        for i, char in enumerate(texto):
+            campo.send_keys(char)
+            # Pequeña pausa entre caracteres para simular escritura real
+            if i % 5 == 0:  # Pausa cada 5 caracteres
+                time.sleep(random.uniform(0.05, 0.1))
+        
+        time.sleep(0.3)
+        logging.info(f"   ✓ Texto escrito: '{texto}'")
+        return True
+        
+    except Exception as e:
+        logging.error(f"   ✗ Error al escribir en el campo: {e}")
+        return False
+
+def hacer_clic_en_primer_resultado(driver):
+    """
+    Espera a que aparezcan resultados y hace clic en el primero.
+    """
+    try:
+        max_intentos = 5
+        for intento in range(max_intentos):
+            # Buscar elementos de resultado
+            resultados = driver.find_elements(By.XPATH, '//div[@role="option"]')
+            
+            if resultados:
+                logging.info(f"   ✓ Encontrados {len(resultados)} resultado(s)")
+                resultados[0].click()
+                logging.info(f"   ✓ Se hizo clic en el primer resultado")
+                time.sleep(1.5)
+                return True
+            
+            if intento < max_intentos - 1:
+                logging.info(f"   Esperando resultados... ({intento + 1}/{max_intentos})")
+                time.sleep(0.5)
+        
+        logging.warning(f"   ⚠ No se encontraron resultados después de esperar")
+        return False
+        
+    except Exception as e:
+        logging.error(f"   Error al hacer clic: {e}")
+        return False
+
 def buscar_y_abrir_grupo(driver, wait, grupo_nombre):
     """
-    Busca un grupo por nombre, limpiando automáticamente emojis y
-    símbolos antes de buscar para hacerlo más robusto.
+    Busca un grupo y lo abre usando Selenium con escritura carácter por carácter.
     """
-    nombre_limpio_final = "" # Inicializar para que esté disponible en el bloque except
     try:
-        # --- INICIO DE LA LÓGICA DE LIMPIEZA ---
-
-        # 1. Normalizar espacios (quitar espacios dobles, raros, etc.)
-        nombre_con_espacios_norm = " ".join(grupo_nombre.split())
+        logging.info(f"Procesando grupo: '{grupo_nombre}'")
         
-        # 2. Quitar emojis, comas y caracteres especiales.
-        #    Nos quedamos solo con letras, números, espacios y (./_-)
-        nombre_sin_emojis = re.sub(r'[^\w\s\./_-]', '', nombre_con_espacios_norm)
+        # 1. Encontrar el campo de búsqueda
+        logging.info("   Encontrando campo de búsqueda...")
+        campos = driver.find_elements(By.XPATH, '//div[@contenteditable="true"]')
         
-        # 3. Volver a normalizar espacios.
-        nombre_limpio_final = " ".join(nombre_sin_emojis.split())
-
-        # --- FIN DE LA LÓGICA DE LIMPIEZA ---
-
-        logging.info(f"Procesando grupo (Nombre JSON): '{grupo_nombre}'")
-        logging.info(f"Buscando con nombre limpio: '{nombre_limpio_final}'")
-        
-        buscar_grupo_input = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, XPATHS["buscar_chat"])
-        ))
-        buscar_grupo_input.clear()
-
-        # 4. Usar el nombre LIMPIO para la BÚSQUEDA (send_keys)
-        buscar_grupo_input.send_keys(nombre_limpio_final)
-        time.sleep(2) # Pausa para que la UI de WhatsApp se actualice
-
-        # 5. Construir un selector XPath más robusto
-        parts = [part for part in nombre_limpio_final.split() if part]
-        if not parts:
-            logging.warning(f"El nombre del grupo '{grupo_nombre}' resultó en una cadena vacía. Saltando.")
+        if not campos:
+            logging.error("   ✗ No se encontró el campo de búsqueda")
             return False
-            
-        conditions = [f"contains(@title, '{part}')" for part in parts]
-        xpath_selector_flexible = f"//span[{' and '.join(conditions)}]"
-
-        logging.info(f"Esperando por el selector (flexible): {xpath_selector_flexible}")
-
-        chat_grupo = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, xpath_selector_flexible)
-        ))
         
-        chat_grupo.click()
-        logging.info(f"¡Clic exitoso! El título real del elemento era: '{chat_grupo.get_attribute('title')}'")
-        return True
-    
-    except TimeoutException:
-        logging.error(f"No se pudo encontrar el grupo con nombre limpio '{nombre_limpio_final}' (Timeout).")
-        logging.error(f"El nombre original era: '{grupo_nombre}'")
-        logging.error("Verifica que el nombre en el JSON sea correcto y que el grupo sea visible en WhatsApp Web.")
+        campo = campos[0]
+        logging.info("   ✓ Campo encontrado")
         
-        try:
-            # Usar wait para más robustez al limpiar
-            wait.until(EC.element_to_be_clickable((By.XPATH, XPATHS["buscar_chat"]))).clear()
-            logging.info("Campo de búsqueda limpiado para el siguiente intento.")
-        except Exception as e_clear:
-            logging.warning(f"No se pudo limpiar el campo de búsqueda tras el error: {e_clear}")
-            
-        return False
+        # 2. Escribir en el campo
+        if not escribir_en_campo_busqueda(driver, grupo_nombre):
+            return False
+        
+        time.sleep(3)  # Esperar a que WhatsApp procese la búsqueda
+        
+        # 3. Hacer clic en el primer resultado
+        logging.info("   Buscando resultados...")
+        if hacer_clic_en_primer_resultado(driver):
+            logging.info(f"✅ ¡Grupo abierto exitosamente!")
+            time.sleep(1)
+            return True
+        else:
+            logging.error(f"❌ No se encontraron resultados para '{grupo_nombre}'")
+            return False
     
     except Exception as e:
-        # Usar repr(e) para obtener más detalles del error
-        logging.error(f"Error inesperado al buscar el grupo '{grupo_nombre}' (nombre limpio: '{nombre_limpio_final}'): {repr(e)}")
+        logging.error(f"❌ Error inesperado: {repr(e)}")
         return False
 
 def enviar_un_mensaje(driver, wait, mensaje_data):
@@ -215,6 +253,7 @@ def procesar_envios(driver, grupos, con_delay=True):
 
         if not buscar_y_abrir_grupo(driver, wait, grupo_nombre):
             driver.get("https://web.whatsapp.com/") # Reset para el siguiente grupo
+            time.sleep(2)  # ← AGREGAR ESTA PAUSA
             continue 
 
         total_mensajes = len(grupo_data["mensajes"])
@@ -228,7 +267,12 @@ def procesar_envios(driver, grupos, con_delay=True):
             pausa_msg = random.randint(60, 180)
             logging.info(f"  Pausa 'anti-spam' de {pausa_msg} segundos...")
             time.sleep(pausa_msg)
-
+        
+        # ← AGREGAR ESTA PAUSA AL FINAL DE CADA GRUPO
+        if i < total_grupos - 1:  # No pausar después del último grupo
+            pausa_grupo = random.randint(2, 5)
+            logging.info(f"Pausa entre grupos: {pausa_grupo} segundos...")
+            time.sleep(pausa_grupo)
     logging.info("\n🎉 ¡Todos los grupos procesados! Esperando la próxima ejecución programada.")
 
 # --- EJECUCIÓN DEL SCRIPT ---
